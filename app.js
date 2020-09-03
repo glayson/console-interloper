@@ -1,19 +1,14 @@
 var keypress = require('keypress');
 const chalk = require('chalk');
-const { threadId } = require('worker_threads');
 
 var interval;
-var variable =``
-let input = ``
 var inimigos = []
 const frameRate = 30
-const colunas = 28;
-const linhas = 9
+var colunas = 40
+var linhas = 30
 var lives = 3
-var originalEnemies = [4,6,8,6,4]
 var gameOver = false
 var points = 0;
-var didShoot = false
 var enemySpeed = 1;
 var enemyStart = 0;
 var enemyGoRight = true;
@@ -22,12 +17,77 @@ var time = new Date()
 
 var enemyShots = []
 
+const init = () => {
+
+    if(colunas > process.stdout.columns){
+        colunas = process.stdout.columns
+    }
+    if(linhas > process.stdout.rows){
+        linhas = process.stdout.rows-4
+    }
+    // make `process.stdin` begin emitting "keypress" events
+    keypress(process.stdin);
+
+    // listen for the "keypress" event
+    process.stdin.on('keypress', function (ch, key) {
+    //console.log('got "keypress"', key);
+        if(key && key.name){
+            processInput(key)
+        }
+    });
+
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+
+    startGame()
+}
+
+const startGame = () => {
+    createEnemies(spawnEnemys());
+    interval = setInterval(update, 1000/frameRate);
+}
+
+const restartGame = () => {
+    enemyShots = []
+    lives = 3
+    nave.shots = []
+    points = 0
+    inimigos = []
+    enemyGoRight = true
+    gameOver = false
+    nave.pos = colunas/2
+    startGame()
+}
+
+const proccessCollisions = () => {
+    processShots()
+    proccessEnemyShots()
+}
+
+const update = () => {
+    time = new Date()
+    
+    proccessCollisions()
+    proccessEnemies()
+
+    if(lives<1){
+        gameOver = true
+        render(gameOverScreen())
+    }else if(inimigos.length<1){
+        gameOver = true
+        render(winScreen())
+    }else{
+        render(gameScreen())
+    }
+
+}
+
 class Enemy {
     constructor(x,y){
         this.x = x
         this.y = y
         this.sprite = chalk.magenta(`W`)
-        this.chanceOfShooting=0.001
+        this.chanceOfShooting=Math.random()*0.001
         this.alive = true
         this.remove = false
         this.canShoot = true
@@ -45,7 +105,7 @@ class Enemy {
         points++
         setTimeout(()=>{
             this.remove = true
-        },2000)
+        },1000)
     }
     tryShooting = () => {
         if((this.chanceOfShooting*(enemyStart/inimigos.length))>Math.random() && this.alive){
@@ -89,17 +149,13 @@ const nave = {
     shots:[]
 }
 
-const makeNaveLine = () => {
-    let line = `#`
-    for(let i =0; i < nave.pos; i++){
-        line +=` `
+const spawnEnemys = () => {
+    let spawnArray = []
+    const arraySize = Math.floor(linhas*.7)
+    for(let i=0; i<arraySize;i++){
+        spawnArray.push(Math.floor(Math.random()*(colunas*.7)))
     }
-    line += `${nave.sprite}`
-    for(let f = nave.pos+nave.width; f<colunas; f++){
-        line +=` `
-    }
-    line+=`#`
-    return line
+    return spawnArray
 }
 
 const moveLeft = () => {
@@ -167,9 +223,7 @@ const proccessEnemies = () => {
                 inimigo.x--
             }
         })
-    }
-
-    
+    }    
 }
 
 const proccessEnemyShots = () => {
@@ -188,108 +242,49 @@ const proccessEnemyShots = () => {
     enemyShots = enemyShots.filter(shot => shot.alive)
 }
 
-const processInput = ()=>{
+const processInput = (key)=>{
     
-    if(variable=='left'){
+    if(key.name=='left'){
         moveLeft()
     }
-    if(variable=='right'){
+    if(key.name=='right'){
         moveRight()
     }
-    if(didShoot){
+    if(key.name=="space"){
         shoot()
-        didShoot = false
     }
-    
-    variable = false
-}
-// make `process.stdin` begin emitting "keypress" events
-keypress(process.stdin);
-
-// listen for the "keypress" event
-process.stdin.on('keypress', function (ch, key) {
-  //console.log('got "keypress"', key);
-  variable = key.name
-  if(gameOver){       
-        if(variable=='enter' || variable=='return'){
+    if(gameOver){       
+        if(key.name=='enter' || key.name=='return'){
             restartGame()
         }
     }
-  if(key && key.name=='space'){
-      didShoot = true;
-  }
-  if (key && key.ctrl && key.name == 'c') {
-    process.exit();
-  }
-});
-
-process.stdin.setRawMode(true);
-process.stdin.resume();
-
-
-
-
-const restartGame = () => {
-    enemyShots = []
-    lives = 3
-    nave.shots = []
-    points = 0
-    inimigos = []
-    enemyGoRight = true
-    gameOver = false
-    nave.pos = colunas/2
-    startGame()
-}
-
-const startGame = () => {
-    createEnemies(originalEnemies);
-    interval = setInterval(update, 1000/frameRate);
+    if (key.ctrl && key.name == 'c') {
+      process.exit();
+    }
 }
 
 
-const update = () => {
-    time = new Date()
-    processInput()
-    processShots()
-    proccessEnemies()
-    proccessEnemyShots()
-    console.clear()
+const gameOverScreen = () => {
+    let screen = fillLine(`GAME OVER`,`-`)+`\n`
+    screen += fillLine(`SCORE`,`-`)+`\n`
+    screen += fillLine(points,`.`)+`\n`
+    screen += fillLine(`PRESS ENTER TO RESTART`,`-`)+`\n`
+    return screen
+}
+const winScreen = () => {
+    let screen = fillLine(`CONGRATULATIONS`,`-`)+`\n`
+    screen += fillLine(`SCORE`,`-`)+`\n`
+    screen += fillLine(points,`.`)+`\n`
+    screen += fillLine(`PRESS ENTER TO RESTART`,`-`)+`\n`
+    return screen
+}
 
-    if(lives<1){
-        gameOver = true
-        console.log(`-------GAME OVER--------`)
-        console.log(`---------SCORE----------`)
-            let digits = points.toString().length
-            let blanks = 24 - digits;
-            let left = Math.floor(blanks/2)
-            let zeros = '.'.repeat(left)
-            let line = zeros+points+zeros
-            if(line.length<24){
-                line += `.`.repeat(24-line.length)
-            }
-            console.log(line)
-            console.log(`-PRESS ENTER TO RESTART-`)
-    }else if(inimigos.length<1){
-        gameOver = true
-        console.log(`----CONGRATULATIONS-----`)  
-        console.log(`---------SCORE----------`)
-            let digits = points.toString().length
-            let blanks = 24 - digits;
-            let left = Math.floor(blanks/2)
-            let zeros = '.'.repeat(left)
-            let line = zeros+points+zeros
-            if(line.length<24){
-                line += `.`.repeat(24-line.length)
-            }
-            console.log(line) 
-            console.log(`-PRESS ENTER TO RESTART-`)
-    }else{
-        let zeros = '0'.repeat(8-points.toString().length)
-    console.log(`Lives:${lives}----#######----${zeros}${points}`)
+const gameScreen = () => {
+    let screen = scoreDisplay()
     for(let i =0; i< linhas; i++){
         let line = `#`
 
-        for(let c =0; c<colunas;c++){
+        for(let c =0; c<colunas-2;c++){
             let shot = nave.shots.find((shot)=>{
                 return (shot.x==c && shot.y==i)
             })
@@ -299,14 +294,14 @@ const update = () => {
             let inimigo = inimigos.find((inimigo)=>{
                 return (inimigo.x==c && inimigo.y==i)
             })
-            if(shot && inimigo && inimigo.alive){
+            if(inimigo && !shot){
+                line+= inimigo.sprite
+            }else if(shot && inimigo && inimigo.alive){
                 shot.alive = false
                 inimigo.die()
                 line += inimigo.sprite
             }else if(shot){
                 line+= chalk.green(shot.ammo.sprite)
-            }else if(inimigo){
-                line+= inimigo.sprite
             }else if(enemyShot){
                 line+= enemyShot.ammo.sprite
             }else{
@@ -314,16 +309,65 @@ const update = () => {
             }
             
         }
-        line += `#`
-        console.log(line)
+        line += `#\n`
+        screen += line
     }
-console.log(makeNaveLine())
-console.log(`#########-#########-#########`)
-    }
-
+    screen += makeNaveLine()
+    screen += fillLine(``,`#`)
+    return screen
 }
 
 
+const fillLine = (value,char) => {
+    digits = value.toString().length
+    let blanks = colunas - digits;
+    let half = Math.floor(blanks/2)
+    let part = char.repeat(half)
+    let line = part+value+part
+    if(line.length<colunas){
+        line += char
+    }
+    return line
+}
 
-startGame()
+const render = (screen) => {
+    console.clear()
+    console.log(screen)
+}
+const scoreDisplay = () => {
+    let zeros = '0'.repeat(8-points.toString().length)
+    let liveString = `Lives:${lives}`
+    let pointString = `${zeros}${points}\n`
+    let midleSpacer = colunas-liveString.length-pointString.length
+    return liveString+`-`.repeat(midleSpacer)+pointString
+}
+const makeNaveLine = () => {
+    let line = `#`
+    for(let i =0; i < nave.pos; i++){
+        let enemyShot = enemyShots.find((shot)=>{
+            return (shot.x==i && shot.y==linhas)
+        })
+        if(enemyShot){
+            line +=enemyShot.ammo.sprite
+        }else{
+            line +=` `
+        }
+    }
+    line += `${nave.sprite}`
+    for(let f = nave.pos+nave.width; f<colunas-2; f++){
+        
+        let enemyShot = enemyShots.find((shot)=>{
+            return (shot.x==f && shot.y==linhas)
+        })
+        if(enemyShot){
+            line +=enemyShot.ammo.sprite
+        }else{
+            line +=` `
+        }
+    }
+    line+=`#\n`
+    return line
+}
+
+init()
 

@@ -2,10 +2,15 @@
   "name": "console-interloper",
   "version": "1.0.0",
   "description": "",
-  "main": "con.js",
+  "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "keypress": "^0.2.1"
+  }
 }
