@@ -244,10 +244,10 @@ const proccessEnemyShots = () => {
 
 const processInput = (key)=>{
     
-    if(key.name=='left'){
+    if(key.name=='left' || key.name == 'a' || key.name == 'A'){
         moveLeft()
     }
-    if(key.name=='right'){
+    if(key.name=='right' || key.name == 'd' || key.name == 'D'){
         moveRight()
     }
     if(key.name=="space"){
