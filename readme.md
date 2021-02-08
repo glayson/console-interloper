@@ -13,4 +13,5 @@ npm start
 ## controllers
 
 Move -> Arrow left, Arrow Rigth
+
 Shoot -> space bar
